@@ -1,0 +1,42 @@
+FROM hub.byted.org/videofaas/toutiao.videoarch.vfaas_general_py37_buster:310f573e4fee71de9cff84e72918a02a
+
+# dependencies.
+RUN apt-get update && apt-get install -y libgomp1 libglib2.0-0 zlib1g && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --upgrade pip numpy==1.16.5 -i https://bytedpypi.byted.org/simple/
+
+# opencv/openvino
+RUN wget -q http://d.scm.byted.org/api/v2/download/ceph:toutiao.mft.mm_build_third_party_1.0.0.32.tar.gz -O \
+    mm_build_third_party.tar.gz && mkdir mm_build_third_party && \
+    tar -zxf mm_build_third_party.tar.gz -C mm_build_third_party && \
+    cp -r mm_build_third_party/opencv/lib/lib* /usr/local/lib/ && \
+    cp -r mm_build_third_party/openvino/lib/lib*.so* /usr/local/lib/ && \
+    cp -r mm_build_third_party/openvino/lib/python_api/python2.7/openvino /usr/local/lib/python3.7/dist-packages/ && \
+    rm -rf  mm_build_third_party.tar.gz && rm -rf mm_build_third_party && \
+    ldconfig
+
+# install cuda
+RUN wget -q http://d.scm.byted.org/api/v2/download/ceph:xyc.xfl.xfl_classifier_image_1.0.0.1.tar.gz -O cuda.tar.gz && \
+    mkdir -p /usr/local/cuda && \
+    tar -zxf cuda.tar.gz -C /usr/local/cuda && rm -rf cuda.tar.gz && \
+    ldconfig 
+    
+# install cuda
+# RUN wget -q http://d.scm.byted.org/api/v2/download/ceph:toutiao.mft.build_cuda_1.0.0.50.tar.gz -O cuda.tar.gz && \
+#     mkdir -p /usr/local/cuda/ && tar -zxf cuda.tar.gz -C /usr/local/cuda && rm -rf cuda.tar.gz && cd /usr/local/cuda && \
+#     # pip3 install /usr/local/cuda/python/tensorrt-7.1.3.4-cp37-none-linux_x86_64.whl && \
+#     rm -rf bin EULA.txt extras include nvml nvvm nvvmx python share src tools && \
+#     rm -rf lib64/lib*.a && rm -rf targets/x86_64-linux/include && cd - \
+#     echo "/usr/local/cuda/lib64/\n/usr/local/cuda/compat/" >> /etc/ld.so.conf.d/cuda.conf && ldconfig
+
+# ffmpeg dependencies.
+RUN apt-get update && apt-get install -y libnuma1 && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# gl-transition dependencies.
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglew2.1 libglfw3 xvfb && \
+	apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV CUDA_HOME /usr/local/cuda
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:$CUDA_HOME/lib64:$CUDA_HOME/compat
+ENV PATH ${PATH}:$CUDA_HOME/bin
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
